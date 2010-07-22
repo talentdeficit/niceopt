@@ -19,9 +19,6 @@ you can also get options as atoms in your proplist, if you're into that:
     Cmd = ["-abc", "-d", "--hi", "alisdair"],
     {ok, {[{a, "bc"}, d, {hi, "alisdair"}], []}} = niceopt:parse(Cmd, [{opts_with_args, ["a", "hi"]}, {labels, atom}]).
 
-
-### windows style command lines
-
 niceopt does windows style command lines too (thanks ttmrichter for the suggestion):
 
     Cmd = ["/a", "/b", "/c", "/d", "/hi:alisdair"],
