@@ -29,7 +29,7 @@ niceopt does windows style command lines too (thanks ttmrichter for the suggesti
 
 ### notes
 
-niceopt understands utf8, and is smart enough to treat multi-byte characters as single characters when used as shorts, but exploiting this is probably questionable
+niceopt understands utf8, and is smart enough to treat multi-byte characters as single characters when used as shorts, but exploiting this is probably questionable. in particular, trying to use {labels, atom} with multi-byte shorts is disasterous
 
 the tests in the module require eunit and that you compile with the macro test defined (pass the option {d, test} to the compiler). they are not even close to comprehensive
 
