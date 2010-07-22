@@ -33,7 +33,8 @@
 
 -record(options, {
     opts_with_args = [],
-    labels = string
+    labels = string,
+    win_mode = false
 }).
 
 
@@ -46,6 +47,8 @@ parse_options([{labels, atom}|Rest], OptsRec) ->
     parse_options(Rest, OptsRec#options{labels = atom});
 parse_options([{labels, string}|Rest], OptsRec) ->
     parse_options(Rest, OptsRec#options{labels = string});
+parse_options([{win_mode, Val}|Rest], OptsRec) ->
+    parse_options(Rest, OptsRec#options{win_mode = Val});
 parse_options([], OptsRec) ->
     OptsRec.
     
@@ -82,10 +85,13 @@ parse_short(S, Rest, Opts, Args, OptsRec) ->
     end.
     
 
+parse_win([], Rest, Opts, Args, OptsRec) ->
+    parse(Rest, Opts, Args, OptsRec);
 parse_win(Win, Rest, Opts, Args, OptsRec) ->
-    case split(Win, ":") of
-        {Key, true} -> parse(Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec)
-        ; {Key, Value} -> parse(Rest, [{label(Key, OptsRec), Value}] ++ Opts, Args, OptsRec)
+    {Opt, Others} = get_win_opt(Win),
+    case split(Opt, ":") of
+        {Key, true} -> parse_win(Others, Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec)
+        ; {Key, Value} -> parse_win(Others, Rest, [{label(Key, OptsRec), Value}] ++ Opts, Args, OptsRec)
     end.
 
     
@@ -129,6 +135,17 @@ get_short([S|Rest]) when S =< 127 -> {[S], Rest};
 get_short([S, T|Rest]) when S >= 192, S =< 223 -> {[S, T], Rest};
 get_short([S, T, U|Rest]) when S >= 224, S =< 239 -> {[S, T, U], Rest};
 get_short([S, T, U, V|Rest]) when S >= 240, S =< 247 -> {[S, T, U, V], Rest}.
+
+
+get_win_opt(Opt) ->
+    get_win_opt(Opt, []).
+    
+get_win_opt([], Opt) ->
+    {lists:reverse(Opt), []};    
+get_win_opt([$/|T], Opt) ->
+    {lists:reverse(Opt), T};    
+get_win_opt([H|T], Opt) ->
+    get_win_opt(T, [H] ++ Opt).
     
     
 %% eunit tests
@@ -155,7 +172,7 @@ mixed_test() ->
             =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c"], ["arg", "another arg"]}}).
             
 win_test() ->
-    ?assert(?MODULE:parse(["/a", "/b", "/c", "/key:value", "arg"], []) =:= {ok, {["a", "b", "c", {"key", "value"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{win_mode, true}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
             
 labels_as_atoms_test() ->
     ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).

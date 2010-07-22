@@ -25,7 +25,7 @@ you can also get options as atoms in your proplist, if you're into that:
 niceopt does windows style command lines too (thanks ttmrichter for the suggestion):
 
     Cmd = ["/a", "/b", "/c", "/d", "/hi:alisdair"],
-    {ok, {["a", "b", "c", "d", {"hi", "alisdair"}], []}} = niceopt:parse(Cmd, []).
+    {ok, {["a", "b", "c", "d", {"hi", "alisdair"}], []}} = niceopt:parse(Cmd, [{win_mode, true}]).
 
 ### notes
 
