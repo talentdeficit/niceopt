@@ -20,6 +20,13 @@ you can also get options as atoms in your proplist, if you're into that:
     {ok, {[{a, "bc"}, d, {hi, "alisdair"}], []}} = niceopt:parse(Cmd, [{opts_with_args, ["a", "hi"]}, {labels, atom}]).
 
 
+### windows style command lines
+
+niceopt does windows style command lines too (thanks ttmrichter for the suggestion):
+
+    Cmd = ["/a", "/b", "/c", "/d", "/hi:alisdair"],
+    {ok, {["a", "b", "c", "d", {"hi", "alisdair"}], []}} = niceopt:parse(Cmd, []).
+
 ### notes
 
 niceopt understands utf8, and is smart enough to treat multi-byte characters as single characters when used as shorts, but exploiting this is probably questionable
