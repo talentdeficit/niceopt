@@ -76,7 +76,7 @@ parse_short(S, Rest, Opts, Args, OptsRec) ->
         ; _ -> 
             case has_arg(Short, OptsRec) of
                 true -> parse(Rest, [{label(Short, OptsRec), Shorts}] ++ Opts, Args, OptsRec)
-                ; false -> parse_short(Shorts, Rest, [{label(Short, OptsRec), true}] ++ Opts, Args, OptsRec)
+                ; false -> parse_short(Shorts, Rest, [label(Short, OptsRec)] ++ Opts, Args, OptsRec)
             end
     end.
     
@@ -88,13 +88,13 @@ get_short([S, T, U, V|Rest]) when S >= 240, S =< 247 -> {[S, T, U, V], Rest}.
 
     
 maybe_arg(Key, [], Opts, Args, OptsRec) ->
-    parse([], [{label(Key, OptsRec), true}] ++ Opts, Args, OptsRec);
+    parse([], [label(Key, OptsRec)] ++ Opts, Args, OptsRec);
 maybe_arg(Key, [[$-|_]|_] = Rest, Opts, Args, OptsRec) ->
-    parse(Rest, [{label(Key, OptsRec), true}] ++ Opts, Args, OptsRec);
+    parse(Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec);
 maybe_arg(Key, [Arg|Rest], Opts, Args, OptsRec) ->
     case has_arg(Key, OptsRec) of
         true -> parse(Rest, [{label(Key, OptsRec), Arg}] ++ Opts, Args, OptsRec)
-        ; false -> parse(Rest, [{label(Key, OptsRec), true}] ++ Opts, [Arg] ++ Args, OptsRec)
+        ; false -> parse(Rest, [label(Key, OptsRec)] ++ Opts, [Arg] ++ Args, OptsRec)
     end.
     
 
@@ -129,16 +129,16 @@ label(Key, OptsRec) ->
 -ifdef(EUNIT).
 
 short_test() ->
-    ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {ok, {[{"a", true}, {"a", true}, {"b", true}, {"a", true}, {"b", true}, {"c", true}], []}}).
+    ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {ok, {["a", "a", "b", "a", "b", "c"], []}}).
 
 short_with_args_test() ->
-    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_args, ["a"]}]) =:= {ok, {[{"a", "arg"}, {"a", true}, {"b", true}, {"a", "arg"}, {"a", "arg"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_args, ["a"]}]) =:= {ok, {[{"a", "arg"}, "a", "b", {"a", "arg"}, {"a", "arg"}], ["arg"]}}).
 
 long_test() ->
-    ?assert(?MODULE:parse(["--hi", "--there"], []) =:= {ok, {[{"hi", true}, {"there", true}], []}}).
+    ?assert(?MODULE:parse(["--hi", "--there"], []) =:= {ok, {["hi", "there"], []}}).
     
 long_with_args_test() ->
-    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_args, ["key"]}]) =:= {ok, {[{"key", "value"}, {"key", true}, {"key", "value"}], ["value"]}}).
+    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_args, ["key"]}]) =:= {ok, {[{"key", "value"}, "key", {"key", "value"}], ["value"]}}).
 
 all_args_test() ->
     ?assert(?MODULE:parse(["some", "random", "words"], []) =:= {ok, {[], ["some", "random", "words"]}}).
@@ -146,12 +146,12 @@ all_args_test() ->
 mixed_test() ->
     ?assert(
         ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg"], [{opts_with_args, ["a", "key"]}]) 
-            =:= {ok, {[{"a", "arg"}, {"key", "value"}, {"a", true}, {"key", "value"}, {"novalue", true}, {"a", true}, {"b", true}, {"c", true}], ["arg", "another arg"]}}).
+            =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c"], ["arg", "another arg"]}}).
             
 labels_as_atoms_test() ->
-    ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[{a, true}, {long, true}], []}}).
+    ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).
     
 unicode_test() ->
-    ?assert(?MODULE:parse([[45, 194, 162, 226, 130, 172, 240, 164, 173, 162]], []) =:= {ok, {[{[194, 162], true}, {[226, 130, 172], true}, {[240, 164, 173, 162], true}], []}}).
+    ?assert(?MODULE:parse([[45, 194, 162, 226, 130, 172, 240, 164, 173, 162]], []) =:= {ok, {[[194, 162], [226, 130, 172], [240, 164, 173, 162]], []}}).
             
 -endif.
