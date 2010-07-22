@@ -56,12 +56,13 @@ parse(Cmd, Opts, Args, OptsRec) ->
     case Cmd of
         [[$-, $-|Long]|Rest] -> parse_long(Long, Rest, Opts, Args, OptsRec)
         ; [[$-|Short]|Rest] -> parse_short(Short, Rest, Opts, Args, OptsRec)
+        ; [[$/|Win]|Rest] -> parse_win(Win, Rest, Opts, Args, OptsRec)
         ; [Arg|Rest] -> parse(Rest, Opts, [Arg] ++ Args, OptsRec)
     end.
 
 
 parse_long(Long, Rest, Opts, Args, OptsRec) ->
-    case split(Long) of
+    case split(Long, "=") of
         {Key, true} -> maybe_arg(Key, Rest, Opts, Args, OptsRec)
         ; {Key, Val} -> parse(Rest, [{label(Key, OptsRec), Val}] ++ Opts, Args, OptsRec)
     end.
@@ -81,10 +82,11 @@ parse_short(S, Rest, Opts, Args, OptsRec) ->
     end.
     
 
-get_short([S|Rest]) when S =< 127 -> {[S], Rest};
-get_short([S, T|Rest]) when S >= 192, S =< 223 -> {[S, T], Rest};
-get_short([S, T, U|Rest]) when S >= 224, S =< 239 -> {[S, T, U], Rest};
-get_short([S, T, U, V|Rest]) when S >= 240, S =< 247 -> {[S, T, U, V], Rest}.  
+parse_win(Win, Rest, Opts, Args, OptsRec) ->
+    case split(Win, ":") of
+        {Key, true} -> parse(Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec)
+        ; {Key, Value} -> parse(Rest, [{label(Key, OptsRec), Value}] ++ Opts, Args, OptsRec)
+    end.
 
     
 maybe_arg(Key, [], Opts, Args, OptsRec) ->
@@ -96,26 +98,12 @@ maybe_arg(Key, [Arg|Rest], Opts, Args, OptsRec) ->
         true -> parse(Rest, [{label(Key, OptsRec), Arg}] ++ Opts, Args, OptsRec)
         ; false -> parse(Rest, [label(Key, OptsRec)] ++ Opts, [Arg] ++ Args, OptsRec)
     end.
-    
-
-split(Opt) ->
-    split(Opt, []).
-    
-split([], Key) ->
-    {lists:reverse(Key), true};
-%% escaped = in key
-split([$\\, $=|T], Key) ->
-    split(T, [$=] ++ Key);    
-split([$=|Val], Key) ->
-    {lists:reverse(Key), Val};    
-split([H|T], Key) ->
-    split(T, [H] ++ Key).
 
 
 has_arg(Key, OptsRec) ->
     lists:member(Key, OptsRec#options.opts_with_args).
     
-    
+
 label(X, OptsRec) when is_integer(X) ->
     label([X], OptsRec);
 label(Key, OptsRec) ->
@@ -123,6 +111,24 @@ label(Key, OptsRec) ->
         string -> Key
         ; atom -> list_to_atom(Key)
     end.
+
+    
+split(Opt, SChar) ->
+    split(Opt, SChar, []).
+
+split([], _SChar, Key) ->
+    {lists:reverse(Key), true};     
+split([H|T], [SChar], Key) ->
+    case H =:= SChar of
+        true -> {lists:reverse(Key), T}
+        ; false -> split(T, [SChar], [H] ++ Key)
+    end.
+    
+
+get_short([S|Rest]) when S =< 127 -> {[S], Rest};
+get_short([S, T|Rest]) when S >= 192, S =< 223 -> {[S, T], Rest};
+get_short([S, T, U|Rest]) when S >= 224, S =< 239 -> {[S, T, U], Rest};
+get_short([S, T, U, V|Rest]) when S >= 240, S =< 247 -> {[S, T, U, V], Rest}.
     
     
 %% eunit tests
@@ -147,6 +153,9 @@ mixed_test() ->
     ?assert(
         ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg"], [{opts_with_args, ["a", "key"]}]) 
             =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c"], ["arg", "another arg"]}}).
+            
+win_test() ->
+    ?assert(?MODULE:parse(["/a", "/b", "/c", "/key:value", "arg"], []) =:= {ok, {["a", "b", "c", {"key", "value"}], ["arg"]}}).
             
 labels_as_atoms_test() ->
     ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).
