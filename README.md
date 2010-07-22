@@ -26,4 +26,4 @@ niceopt understands utf8, and is smart enough to treat multi-byte characters as 
 
 the tests in the module require eunit and that you compile with the macro test defined (pass the option {d, test} to the compiler). they are not even close to comprehensive
 
-bigfixes, improvements and feature requests welcomed
+bugfixes, improvements and feature requests welcomed
