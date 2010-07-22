@@ -55,13 +55,18 @@ parse_options([], OptsRec) ->
 
 parse([], Opts, Args, _OptsRec) ->
     {ok, {lists:reverse(Opts), lists:reverse(Args)}};
+parse(Cmd, Opts, Args, OptsRec) when element(#options.win_mode, OptsRec) =:= true ->
+    case Cmd of
+        [[$/|Win]|Rest] -> 
+            parse_win(Win, Rest, Opts, Args, OptsRec)
+        ; [Arg|Rest] -> parse(Rest, Opts, [Arg] ++ Args, OptsRec)
+    end;
 parse(Cmd, Opts, Args, OptsRec) ->
     case Cmd of
         [[$-, $-|Long]|Rest] -> parse_long(Long, Rest, Opts, Args, OptsRec)
         ; [[$-|Short]|Rest] -> parse_short(Short, Rest, Opts, Args, OptsRec)
-        ; [[$/|Win]|Rest] -> parse_win(Win, Rest, Opts, Args, OptsRec)
         ; [Arg|Rest] -> parse(Rest, Opts, [Arg] ++ Args, OptsRec)
-    end.
+    end.  
 
 
 parse_long(Long, Rest, Opts, Args, OptsRec) ->
@@ -168,8 +173,8 @@ all_args_test() ->
     
 mixed_test() ->
     ?assert(
-        ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg"], [{opts_with_args, ["a", "key"]}]) 
-            =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c"], ["arg", "another arg"]}}).
+        ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg", "--path", "/usr/bin"], [{opts_with_args, ["a", "key", "path"]}]) 
+            =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c", {"path", "/usr/bin"}], ["arg", "another arg"]}}).
             
 win_test() ->
     ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{win_mode, true}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
