@@ -69,18 +69,22 @@ parse_long(Long, Rest, Opts, Args, OptsRec) ->
 
 parse_short([], Rest, Opts, Args, OptsRec) ->
     parse(Rest, Opts, Args, OptsRec);
-parse_short([S], [[$-|_]|_] = Rest, Opts, Args, OptsRec) ->
-    parse(Rest, [{label(S, OptsRec), true}] ++ Opts, Args, OptsRec);
-parse_short([S], [Arg|Rest], Opts, Args, OptsRec) ->
-    case has_arg([S], OptsRec) of
-        true -> parse(Rest, [{label(S, OptsRec), Arg}] ++ Opts, Args, OptsRec)
-        ; false -> parse(Rest, [{label(S, OptsRec), true}] ++ Opts, [Arg] ++ Args, OptsRec)
-    end;
-parse_short([S|Shorts], Rest, Opts, Args, OptsRec) ->
-    case has_arg([S], OptsRec) of
-        true -> parse(Rest, [{label(S, OptsRec), Shorts}] ++ Opts, Args, OptsRec)
-        ; false -> parse_short(Shorts, Rest, [{label(S, OptsRec), true}] ++ Opts, Args, OptsRec)
+parse_short(S, Rest, Opts, Args, OptsRec) ->
+    {Short, Shorts} = get_short(S),
+    case Shorts of
+        [] -> maybe_arg(Short, Rest, Opts, Args, OptsRec)
+        ; _ -> 
+            case has_arg(Short, OptsRec) of
+                true -> parse(Rest, [{label(Short, OptsRec), Shorts}] ++ Opts, Args, OptsRec)
+                ; false -> parse_short(Shorts, Rest, [{label(Short, OptsRec), true}] ++ Opts, Args, OptsRec)
+            end
     end.
+    
+
+get_short([S|Rest]) when S =< 127 -> {[S], Rest};
+get_short([S, T|Rest]) when S >= 192, S =< 223 -> {[S, T], Rest};
+get_short([S, T, U|Rest]) when S >= 224, S =< 239 -> {[S, T, U], Rest};
+get_short([S, T, U, V|Rest]) when S >= 240, S =< 247 -> {[S, T, U, V], Rest}.  
 
     
 maybe_arg(Key, [], Opts, Args, OptsRec) ->
@@ -90,7 +94,7 @@ maybe_arg(Key, [[$-|_]|_] = Rest, Opts, Args, OptsRec) ->
 maybe_arg(Key, [Arg|Rest], Opts, Args, OptsRec) ->
     case has_arg(Key, OptsRec) of
         true -> parse(Rest, [{label(Key, OptsRec), Arg}] ++ Opts, Args, OptsRec)
-        ; false -> parse([Arg] ++ Rest, [{label(Key, OptsRec), true}] ++ Opts, Args, OptsRec)
+        ; false -> parse(Rest, [{label(Key, OptsRec), true}] ++ Opts, [Arg] ++ Args, OptsRec)
     end.
     
 
@@ -146,5 +150,8 @@ mixed_test() ->
             
 labels_as_atoms_test() ->
     ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[{a, true}, {long, true}], []}}).
+    
+unicode_test() ->
+    ?assert(?MODULE:parse([[45, 194, 162, 226, 130, 172, 240, 164, 173, 162]], []) =:= {ok, {[{[194, 162], true}, {[226, 130, 172], true}, {[240, 164, 173, 162], true}], []}}).
             
 -endif.
