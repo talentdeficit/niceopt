@@ -65,8 +65,8 @@ parse(Cmd, OptsAcc, ArgsAcc, OptsRec) when element(#options.mode, OptsRec) =:= w
     end;
 parse(Cmd, OptsAcc, ArgsAcc, OptsRec) ->
     case Cmd of
-        [[$-, $-]|Rest] -> parse([], OptsAcc, Rest ++ ArgsAcc, OptsRec) % terminate collection of opts, 
-                                                                        %    everything else is an arg
+        [[$-, $-]|Rest] ->                                              % terminate collection of opts, 
+            parse([], OptsAcc, lists:reverse(Rest) ++ ArgsAcc, OptsRec) %    everything else is an arg
         ; [[$-, $-|Opt]|Rest] -> parse_long(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
         ; [[$-|Opt]|Rest] -> parse_short(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
         ; [Arg|Rest] -> parse(Rest, OptsAcc, [Arg] ++ ArgsAcc, OptsRec)
@@ -185,6 +185,9 @@ mixed_test() ->
             
 win_test() ->
     ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{mode, win}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
+    
+early_termination_test() ->
+    ?assert(?MODULE:parse(["-a", "--", "-a", "--a"], []) =:= {ok, {["a"], ["-a", "--a"]}}).
             
 labels_as_atoms_test() ->
     ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).
