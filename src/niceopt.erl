@@ -32,87 +32,91 @@
 -endif.
 
 -record(options, {
-    opts_with_args = [],
+    opts_with_vals = [],
     labels = string,
-    win_mode = false
+    mode = unix
 }).
 
 
 parse(Cmd, Options) ->
     parse(Cmd, [], [], parse_options(Options, #options{})).
     
-parse_options([{opts_with_args, Val}|Rest], OptsRec) when is_list(Val) ->
-    parse_options(Rest, OptsRec#options{opts_with_args = Val});
+parse_options([{opts_with_vals, Val}|Rest], OptsRec) when is_list(Val) ->
+    parse_options(Rest, OptsRec#options{opts_with_vals = Val});
 parse_options([{labels, atom}|Rest], OptsRec) ->
     parse_options(Rest, OptsRec#options{labels = atom});
 parse_options([{labels, string}|Rest], OptsRec) ->
     parse_options(Rest, OptsRec#options{labels = string});
-parse_options([{win_mode, Val}|Rest], OptsRec) ->
-    parse_options(Rest, OptsRec#options{win_mode = Val});
+parse_options([{mode, win}|Rest], OptsRec) ->
+    parse_options(Rest, OptsRec#options{mode = win});
+parse_options([{mode, unix}|Rest], OptsRec) ->
+    parse_options(Rest, OptsRec#options{mode = unix});
 parse_options([], OptsRec) ->
     OptsRec.
     
 
-parse([], Opts, Args, _OptsRec) ->
-    {ok, {lists:reverse(Opts), lists:reverse(Args)}};
-parse(Cmd, Opts, Args, OptsRec) when element(#options.win_mode, OptsRec) =:= true ->
+parse([], OptsAcc, ArgsAcc, _OptsRec) ->
+    {ok, {lists:reverse(OptsAcc), lists:reverse(ArgsAcc)}};
+parse(Cmd, OptsAcc, ArgsAcc, OptsRec) when element(#options.mode, OptsRec) =:= win ->
     case Cmd of
-        [[$/|Win]|Rest] -> 
-            parse_win(Win, Rest, Opts, Args, OptsRec)
-        ; [Arg|Rest] -> parse(Rest, Opts, [Arg] ++ Args, OptsRec)
+        [[$/|Opt]|Rest] -> 
+            parse_win(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
+        ; [Arg|Rest] -> parse(Rest, OptsAcc, [Arg] ++ ArgsAcc, OptsRec)
     end;
-parse(Cmd, Opts, Args, OptsRec) ->
+parse(Cmd, OptsAcc, ArgsAcc, OptsRec) ->
     case Cmd of
-        [[$-, $-|Long]|Rest] -> parse_long(Long, Rest, Opts, Args, OptsRec)
-        ; [[$-|Short]|Rest] -> parse_short(Short, Rest, Opts, Args, OptsRec)
-        ; [Arg|Rest] -> parse(Rest, Opts, [Arg] ++ Args, OptsRec)
+        [[$-, $-]|Rest] -> parse([], OptsAcc, Rest ++ ArgsAcc, OptsRec) % terminate collection of opts, 
+                                                                        %    everything else is an arg
+        ; [[$-, $-|Opt]|Rest] -> parse_long(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
+        ; [[$-|Opt]|Rest] -> parse_short(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
+        ; [Arg|Rest] -> parse(Rest, OptsAcc, [Arg] ++ ArgsAcc, OptsRec)
     end.  
 
 
-parse_long(Long, Rest, Opts, Args, OptsRec) ->
-    case split(Long, "=") of
-        {Key, true} -> maybe_arg(Key, Rest, Opts, Args, OptsRec)
-        ; {Key, Val} -> parse(Rest, [{label(Key, OptsRec), Val}] ++ Opts, Args, OptsRec)
+parse_long(Opt, Rest, OptsAcc, ArgsAcc, OptsRec) ->
+    case split(Opt, "=") of
+        {Key, none} -> maybe_val(Key, Rest, OptsAcc, ArgsAcc, OptsRec)
+        ; {Key, Val} -> parse(Rest, [{label(Key, OptsRec), Val}] ++ OptsAcc, ArgsAcc, OptsRec)
     end.
 
 
-parse_short([], Rest, Opts, Args, OptsRec) ->
-    parse(Rest, Opts, Args, OptsRec);
-parse_short(S, Rest, Opts, Args, OptsRec) ->
-    {Short, Shorts} = get_short(S),
+parse_short([], Rest, OptsAcc, ArgsAcc, OptsRec) ->
+    parse(Rest, OptsAcc, ArgsAcc, OptsRec);
+parse_short(Opt, Rest, OptsAcc, ArgsAcc, OptsRec) ->
+    {S, Shorts} = get_short(Opt),
     case Shorts of
-        [] -> maybe_arg(Short, Rest, Opts, Args, OptsRec)
+        [] -> maybe_val(S, Rest, OptsAcc, ArgsAcc, OptsRec)
         ; _ -> 
-            case has_arg(Short, OptsRec) of
-                true -> parse(Rest, [{label(Short, OptsRec), Shorts}] ++ Opts, Args, OptsRec)
-                ; false -> parse_short(Shorts, Rest, [label(Short, OptsRec)] ++ Opts, Args, OptsRec)
+            case has_val(S, OptsRec) of
+                true -> parse(Rest, [{label(S, OptsRec), Shorts}] ++ OptsAcc, ArgsAcc, OptsRec)
+                ; false -> parse_short(Shorts, Rest, [label(S, OptsRec)] ++ OptsAcc, ArgsAcc, OptsRec)
             end
     end.
     
 
-parse_win([], Rest, Opts, Args, OptsRec) ->
-    parse(Rest, Opts, Args, OptsRec);
-parse_win(Win, Rest, Opts, Args, OptsRec) ->
-    {Opt, Others} = get_win_opt(Win),
-    case split(Opt, ":") of
-        {Key, true} -> parse_win(Others, Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec)
-        ; {Key, Value} -> parse_win(Others, Rest, [{label(Key, OptsRec), Value}] ++ Opts, Args, OptsRec)
+parse_win([], Rest, OptsAcc, ArgsAcc, OptsRec) ->
+    parse(Rest, OptsAcc, ArgsAcc, OptsRec);
+parse_win(Opt, Rest, OptsAcc, ArgsAcc, OptsRec) ->
+    {Win, Others} = get_win_opt(Opt),
+    case split(Win, ":") of
+        {Key, none} -> parse_win(Others, Rest, [label(Key, OptsRec)] ++ OptsAcc, ArgsAcc, OptsRec)
+        ; {Key, Value} -> parse_win(Others, Rest, [{label(Key, OptsRec), Value}] ++ OptsAcc, ArgsAcc, OptsRec)
     end.
 
     
-maybe_arg(Key, [], Opts, Args, OptsRec) ->
+maybe_val(Key, [], Opts, Args, OptsRec) ->
     parse([], [label(Key, OptsRec)] ++ Opts, Args, OptsRec);
-maybe_arg(Key, [[$-|_]|_] = Rest, Opts, Args, OptsRec) ->
+maybe_val(Key, [[$-|_]|_] = Rest, Opts, Args, OptsRec) ->
     parse(Rest, [label(Key, OptsRec)] ++ Opts, Args, OptsRec);
-maybe_arg(Key, [Arg|Rest], Opts, Args, OptsRec) ->
-    case has_arg(Key, OptsRec) of
+maybe_val(Key, [Arg|Rest], Opts, Args, OptsRec) ->
+    case has_val(Key, OptsRec) of
         true -> parse(Rest, [{label(Key, OptsRec), Arg}] ++ Opts, Args, OptsRec)
         ; false -> parse(Rest, [label(Key, OptsRec)] ++ Opts, [Arg] ++ Args, OptsRec)
     end.
 
 
-has_arg(Key, OptsRec) ->
-    lists:member(Key, OptsRec#options.opts_with_args).
+has_val(Key, OptsRec) ->
+    lists:member(Key, OptsRec#options.opts_with_vals).
     
 
 label(X, OptsRec) when is_integer(X) ->
@@ -120,20 +124,23 @@ label(X, OptsRec) when is_integer(X) ->
 label(Key, OptsRec) ->
     case OptsRec#options.labels of
         string -> Key
-        ; atom -> list_to_atom(Key)
+        ; atom -> list_to_atom(Key)     % mixing this with utf8 options is supported, but weird
     end.
 
     
-split(Opt, SChar) ->
-    split(Opt, SChar, []).
+split(Opt, S) ->
+    split(Opt, S, []).
 
-split([], _SChar, Key) ->
-    {lists:reverse(Key), true};     
-split([H|T], [SChar], Key) ->
-    case H =:= SChar of
-        true -> {lists:reverse(Key), T}
-        ; false -> split(T, [SChar], [H] ++ Key)
-    end.
+split([], _S, Key) ->
+    {lists:reverse(Key), none};
+split([$\\, SChar|T], [SChar], Key) ->      % if the opt:val delimeter character is preceded by the escape
+    split(T, [SChar], [SChar] ++ Key);      %    character (\) just add it to the key and continue
+split([SChar|[]], [SChar], _Key) ->         % dunno if i like this, but throw an error if there's a opt:val
+    erlang:error(badarg);                   %    delimiter that isn't followed by a val
+split([SChar|T], [SChar], Key) ->
+    {lists:reverse(Key), T};
+split([H|T], S, Key) ->
+    split(T, S, [H] ++ Key).
     
 
 get_short([S|Rest]) when S =< 127 -> {[S], Rest};
@@ -160,24 +167,24 @@ short_test() ->
     ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {ok, {["a", "a", "b", "a", "b", "c"], []}}).
 
 short_with_args_test() ->
-    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_args, ["a"]}]) =:= {ok, {[{"a", "arg"}, "a", "b", {"a", "arg"}, {"a", "arg"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_vals, ["a"]}]) =:= {ok, {[{"a", "arg"}, "a", "b", {"a", "arg"}, {"a", "arg"}], ["arg"]}}).
 
 long_test() ->
     ?assert(?MODULE:parse(["--hi", "--there"], []) =:= {ok, {["hi", "there"], []}}).
     
 long_with_args_test() ->
-    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_args, ["key"]}]) =:= {ok, {[{"key", "value"}, "key", {"key", "value"}], ["value"]}}).
+    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_vals, ["key"]}]) =:= {ok, {[{"key", "value"}, "key", {"key", "value"}], ["value"]}}).
 
 all_args_test() ->
     ?assert(?MODULE:parse(["some", "random", "words"], []) =:= {ok, {[], ["some", "random", "words"]}}).
     
 mixed_test() ->
     ?assert(
-        ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg", "--path", "/usr/bin"], [{opts_with_args, ["a", "key", "path"]}]) 
+        ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg", "--path", "/usr/bin"], [{opts_with_vals, ["a", "key", "path"]}]) 
             =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c", {"path", "/usr/bin"}], ["arg", "another arg"]}}).
             
 win_test() ->
-    ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{win_mode, true}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{mode, win}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
             
 labels_as_atoms_test() ->
     ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).
