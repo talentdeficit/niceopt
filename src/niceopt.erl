@@ -136,7 +136,7 @@ split([], _S, Key) ->
 split([$\\, SChar|T], [SChar], Key) ->      % if the opt:val delimeter character is preceded by the escape
     split(T, [SChar], [SChar] ++ Key);      %    character (\) just add it to the key and continue
 split([SChar|[]], [SChar], _Key) ->         % dunno if i like this, but throw an error if there's a opt:val
-    erlang:error(badarg);                   %    delimiter that isn't followed by a val
+    erlang:error(badarg);                   %    delimiter that isn't followed by a val. maybe should be []?
 split([SChar|T], [SChar], Key) ->
     {lists:reverse(Key), T};
 split([H|T], S, Key) ->
