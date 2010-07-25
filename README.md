@@ -45,7 +45,7 @@ anything starting with a forward slash `/` is an option, terminated by another `
 
 anything else is an argument
 
-note that `escript\opt:val\opt` may not be valid on your platform, the first option may have to be preceded by whitespace (`escript \opt:val\opt`)
+note that `escript/opt:val/opt` may not be valid on your platform, the first option may have to be preceded by whitespace (`escript /opt:val/opt`)
 
 
 ### notes
