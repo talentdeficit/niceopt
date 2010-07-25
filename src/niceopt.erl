@@ -33,13 +33,17 @@
 
 -record(options, {
     opts_with_vals = [],
-    labels = string,
+    labels = atom,
     mode = unix
 }).
 
 
+-type niceopt_opt() :: {opts_with_vals, [string()]} | {labels, atom} | {labels, string} | {mode, win} | {mode, unix}.
+-spec parse(Cmd::[string()], Options::[niceopt_opt()]) -> {[atom() | string() | {atom() | string(), string()}], [string()]}.
+
 parse(Cmd, Options) ->
     parse(Cmd, [], [], parse_options(Options, #options{})).
+    
     
 parse_options([{opts_with_vals, Val}|Rest], OptsRec) when is_list(Val) ->
     parse_options(Rest, OptsRec#options{opts_with_vals = Val});
@@ -56,7 +60,7 @@ parse_options([], OptsRec) ->
     
 
 parse([], OptsAcc, ArgsAcc, _OptsRec) ->
-    {ok, {lists:reverse(OptsAcc), lists:reverse(ArgsAcc)}};
+    {lists:reverse(OptsAcc), lists:reverse(ArgsAcc)};
 parse(Cmd, OptsAcc, ArgsAcc, OptsRec) when element(#options.mode, OptsRec) =:= win ->
     case Cmd of
         [[$/|Opt]|Rest] -> 
@@ -164,35 +168,35 @@ get_win_opt([H|T], Opt) ->
 -ifdef(EUNIT).
 
 short_test() ->
-    ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {ok, {["a", "a", "b", "a", "b", "c"], []}}).
+    ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {[a, a, b, a, b, c], []}).
 
 short_with_args_test() ->
-    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_vals, ["a"]}]) =:= {ok, {[{"a", "arg"}, "a", "b", {"a", "arg"}, {"a", "arg"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["-aarg", "-a", "-baarg", "-a", "arg", "arg"], [{opts_with_vals, ["a"]}]) =:= {[{a, "arg"}, a, b, {a, "arg"}, {a, "arg"}], ["arg"]}).
 
 long_test() ->
-    ?assert(?MODULE:parse(["--hi", "--there"], []) =:= {ok, {["hi", "there"], []}}).
+    ?assert(?MODULE:parse(["--hi", "--there"], []) =:={[hi, there], []}).
     
 long_with_args_test() ->
-    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_vals, ["key"]}]) =:= {ok, {[{"key", "value"}, "key", {"key", "value"}], ["value"]}}).
+    ?assert(?MODULE:parse(["--key=value", "--key", "--key", "value", "value"], [{opts_with_vals, ["key"]}]) =:= {[{key, "value"}, key, {key, "value"}], ["value"]}).
 
 all_args_test() ->
-    ?assert(?MODULE:parse(["some", "random", "words"], []) =:= {ok, {[], ["some", "random", "words"]}}).
+    ?assert(?MODULE:parse(["some", "random", "words"], []) =:= {[], ["some", "random", "words"]}).
     
 mixed_test() ->
     ?assert(
         ?MODULE:parse(["-aarg", "--key=value", "arg", "-a", "--key", "value", "--novalue", "-a", "-bc", "another arg", "--path", "/usr/bin"], [{opts_with_vals, ["a", "key", "path"]}]) 
-            =:= {ok, {[{"a", "arg"}, {"key", "value"}, "a", {"key", "value"}, "novalue", "a", "b", "c", {"path", "/usr/bin"}], ["arg", "another arg"]}}).
+            =:= {[{a, "arg"}, {key, "value"}, a, {key, "value"}, novalue, a, b, c, {path, "/usr/bin"}], ["arg", "another arg"]}).
             
 win_test() ->
-    ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{mode, win}]) =:= {ok, {["a", "b", "c", "d", {"key", "value"}], ["arg"]}}).
+    ?assert(?MODULE:parse(["/a/b/c", "/d", "/key:value", "arg"], [{mode, win}]) =:= {[a, b, c, d, {key, "value"}], ["arg"]}).
     
 early_termination_test() ->
-    ?assert(?MODULE:parse(["-a", "--", "-a", "--a"], []) =:= {ok, {["a"], ["-a", "--a"]}}).
+    ?assert(?MODULE:parse(["-a", "--", "-a", "--a"], []) =:= {[a], ["-a", "--a"]}).
             
-labels_as_atoms_test() ->
-    ?assert(?MODULE:parse(["-a", "--long"], [{labels, atom}]) =:= {ok, {[a, long], []}}).
+labels_as_strings_test() ->
+    ?assert(?MODULE:parse(["-a", "--long", "--key=value"], [{labels, string}]) =:= {["a", "long", {"key", "value"}], []}).
     
 unicode_test() ->
-    ?assert(?MODULE:parse([[45, 194, 162, 226, 130, 172, 240, 164, 173, 162]], []) =:= {ok, {[[194, 162], [226, 130, 172], [240, 164, 173, 162]], []}}).
+    ?assert(?MODULE:parse([[45, 194, 162, 226, 130, 172, 240, 164, 173, 162]], [{labels, string}]) =:= {[[194, 162], [226, 130, 172], [240, 164, 173, 162]], []}).
             
 -endif.
