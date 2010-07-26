@@ -65,12 +65,13 @@ parse(Cmd, OptsAcc, ArgsAcc, OptsRec) when element(#options.mode, OptsRec) =:= w
     case Cmd of
         [[$/|Opt]|Rest] -> 
             parse_win(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
+        ; [[$-, $-]|Rest] -> parse([], OptsAcc, lists:reverse(Rest) ++ ArgsAcc, OptsRec)
         ; [Arg|Rest] -> parse(Rest, OptsAcc, [Arg] ++ ArgsAcc, OptsRec)
     end;
 parse(Cmd, OptsAcc, ArgsAcc, OptsRec) ->
     case Cmd of
-        [[$-, $-]|Rest] ->                                              % terminate collection of opts, 
-            parse([], OptsAcc, lists:reverse(Rest) ++ ArgsAcc, OptsRec) %    everything else is an arg
+        [[$-, $-]|Rest] ->
+            parse([], OptsAcc, lists:reverse(Rest) ++ ArgsAcc, OptsRec)
         ; [[$-, $-|Opt]|Rest] -> parse_long(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
         ; [[$-|Opt]|Rest] -> parse_short(Opt, Rest, OptsAcc, ArgsAcc, OptsRec)
         ; [Arg|Rest] -> parse(Rest, OptsAcc, [Arg] ++ ArgsAcc, OptsRec)
@@ -192,6 +193,9 @@ win_test() ->
     
 early_termination_test() ->
     ?assert(?MODULE:parse(["-a", "--", "-a", "--a"], []) =:= {[{a, true}], ["-a", "--a"]}).
+    
+early_termination_win_test() ->
+    ?assert(?MODULE:parse(["/a", "--", "/a", "/a"], [{mode, win}]) =:= {[{a, true}], ["/a", "/a"]}).
             
 labels_as_strings_test() ->
     ?assert(?MODULE:parse(["-a", "--long", "--key=value"], [{labels, string}]) =:= {[{"a", true}, {"long", true}, {"key", "value"}], []}).

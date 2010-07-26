@@ -32,8 +32,6 @@ short options are specified with a single dash and a single character. utf8 char
 
 long options are specified with two consecutive dashes and a sequence of characters terminated by whitespace or `=`. anything following the `=` (or whitespace, if the long option has a possible value as with short options above) is it's value. you can include `=` in the long option label by escaping it with a preceding backslash: `\=`
 
-the sequence `--`, terminated by whitespace, is a flag to niceopt to cease parsing options and consider everything following as an argument
-
 anything else is considered an argument
 
 niceopt does not parse partial long opts like getopt, because that requires declaring every possible option ahead of time, the exact reason i wrote niceopt instead of using a straight getopt port
@@ -46,6 +44,9 @@ anything starting with a forward slash `/` is an option, terminated by another `
 anything else is an argument
 
 note that `escript/opt:val/opt` may not be valid on your platform, the first option may have to be preceded by whitespace (`escript /opt:val/opt`)
+
+
+in either mode, the sequence `--`, terminated by whitespace, is a flag to niceopt to cease parsing options and consider everything following as an argument
 
 
 ### notes
