@@ -5,12 +5,12 @@
 like so:
 
     Cmd = ["-abc", "-d" "--hi", "--key=value", "alisdair"],
-    {[a, b, c, d, hi, {key, "value"}], ["alisdair"]} = niceopt:parse(Cmd, []).
+    {[{a, true}, {b, true}, {c, true}, {d, true}, {hi, true}, {key, "value"}], ["alisdair"]} = niceopt:parse(Cmd, []).
 
 or:
 	
     Cmd = ["\a\b\c", "\d", "\hi", "\key:value", "alisdair"],
-	{[a, b, c, d, hi, {key, "value"}], ["alisdair"]} = niceopt:parse(Cmd, [{mode, win}]).
+	{[{a, true}, {b, true}, {c, true}, {d, true}, {hi, true}, {key, "value"}], ["alisdair"]} = niceopt:parse(Cmd, [{mode, win}]).
 
 
 ### interface
@@ -28,7 +28,7 @@ only one function is exported, `parse/2`. it takes the command line to be parsed
 
 niceopt's unix mode mimics getopt as closely as possible without requiring a lot of interface overhead
 
-short options are specified with a single dash and a single character. utf8 characters that represent a single codepoint but which are multiple bytes are handled correctly, though they may result in unexpected or odd output. a single dash followed by multiple characters is parsed as if expanded like: `-abcd` -> `-a -b -c -d`. if a short option has a possible value (as indicated by the value of `opts\_with\_vals` in the options proplist) it will capture the following character sequence, even if seperated by whitespace, unless it starts with a `-`
+short options are specified with a single dash and a single character. utf8 characters that represent a single codepoint but which are multiple bytes are handled correctly, though they may result in unexpected or odd output. a single dash followed by multiple characters is parsed as if expanded like: `-abcd` -> `-a -b -c -d`. if a short option has a possible value (as indicated by the value of `opts_with_vals` in the options proplist) it will capture the following character sequence, even if seperated by whitespace, unless it starts with a `-`
 
 long options are specified with two consecutive dashes and a sequence of characters terminated by whitespace or `=`. anything following the `=` (or whitespace, if the long option has a possible value as with short options above) is it's value. you can include `=` in the long option label by escaping it with a preceding backslash: `\=`
 
