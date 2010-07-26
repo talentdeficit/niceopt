@@ -49,6 +49,11 @@ note that `escript/opt:val/opt` may not be valid on your platform, the first opt
 in either mode, the sequence `--`, terminated by whitespace, is a flag to niceopt to cease parsing options and consider everything following as an argument
 
 
+### compilation and installation
+
+niceopt uses rebar for it's build script. `./rebar compile` compiles the source files into the `ebin` dir, `./rebar eunit` to run eunit tests and `./rebar install target=[TARGET]` to install into `[TARGET]`
+
+
 ### notes
 
 the tests in the module require eunit and that you compile with the macro test defined (pass the option `{d, test}` to the compiler). they are not even close to comprehensive
