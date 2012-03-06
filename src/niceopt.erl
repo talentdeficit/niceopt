@@ -27,10 +27,6 @@
 -export([parse/2]).
 
 
--ifdef(test).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -record(options, {
     opts_with_vals = [],
     labels = atom,
@@ -166,7 +162,8 @@ get_win_opt([H|T], Opt) ->
     
     
 %% eunit tests
--ifdef(EUNIT).
+-ifdef(test).
+-include_lib("eunit/include/eunit.hrl").
 
 short_test() ->
     ?assert(?MODULE:parse(["-a", "-ab", "-abc"], []) =:= {[{a, true}, {a, true}, {b, true}, {a, true}, {b, true}, {c, true}], []}).
