@@ -51,7 +51,7 @@ in either mode, the sequence `--`, terminated by whitespace, is a flag to niceop
 
 ### compilation and installation
 
-niceopt uses rebar for it's build script. `./rebar compile` compiles the source files into the `ebin` dir, `./rebar eunit` to run eunit tests and `./rebar install target=[TARGET]` to install into `[TARGET]`
+niceopt uses [rebar][rebar] for it's build script. `./rebar compile` compiles the source files into the `ebin` dir, `./rebar eunit` to run eunit tests and `./rebar install target=[TARGET]` to install into `[TARGET]`
 
 
 ### notes
@@ -63,3 +63,5 @@ this readme is really terrible, it's shameful i haven't fixed it yet
 thanks to ttmrichter for feedback and suggestions
 
 bugfixes, improvements and feature requests welcomed
+
+[rebar]: https://github.com/basho/rebar
