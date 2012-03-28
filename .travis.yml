@@ -1,4 +1,4 @@
-script: ./rebar --jobs 1 compile && ./rebar --jobs 1 eunit
+script: rebar compile && rebar eunit
 language: erlang
 otp_release:
   - R15B
